@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Check Transaction{% endblock %}
+{% block content %}
+<div class="wrap page-head">
+  <h1>Check a transaction</h1>
+  <p>Enter the details of one account's purchase to get its fraud risk.</p>
+</div>
+
+<div class="wrap two-col">
+  <form class="panel" method="post">
+    <h3 class="panel-title">Transaction details</h3>
+    <div class="grid2">
+      <label>Purchase value ($)<input type="number" name="value" min="0" step="1" value="{{ form.value }}" required></label>
+      <label>Customer age<input type="number" name="age" min="18" max="100" value="{{ form.age }}" required></label>
+      <label>Sex
+        <select name="sex">{% for s in ['M','F'] %}<option {{ 'selected' if form.sex == s }}>{{ s }}</option>{% endfor %}</select>
+      </label>
+      <label>Browser
+        <select name="browser">{% for b in ['Chrome','IE','Safari','FireFox','Opera'] %}<option {{ 'selected' if form.browser == b }}>{{ b }}</option>{% endfor %}</select>
+      </label>
+      <label>Traffic source
+        <select name="source">{% for s in ['SEO','Ads','Direct'] %}<option {{ 'selected' if form.source == s }}>{{ s }}</option>{% endfor %}</select>
+      </label>
+      <label>IP address<input type="text" name="ip" value="{{ form.ip }}" required></label>
+      <label>Signup time<input type="text" name="signup" value="{{ form.signup }}" placeholder="YYYY-MM-DD HH:MM:SS" required></label>
+      <label>Purchase time<input type="text" name="purchase" value="{{ form.purchase }}" placeholder="YYYY-MM-DD HH:MM:SS" required></label>
+    </div>
+    <label class="full">Accounts that used this device in the review period
+      <input type="number" name="devices" min="1" step="1" value="{{ form.devices }}" required>
+      <small>Count every account on the same device, including this one.</small>
+    </label>
+    <button class="btn primary wide" type="submit">Check risk</button>
+    <p class="hint">Try a bot-speed case: set the purchase time 1 second after the signup time and the device count to 5.</p>
+  </form>
+
+  <div class="panel result">
+    <h3 class="panel-title">Result</h3>
+    {% if error %}<div class="alert">{{ error }}</div>{% endif %}
+    {% if result %}
+      {% set pct = (result.prob * 100) %}
+      <div class="gauge tier-{{ result.tier|lower }}">
+        <svg viewBox="0 0 200 120">
+          <path d="M20 100 A80 80 0 0 1 180 100" class="g-track"/>
+          <path d="M20 100 A80 80 0 0 1 180 100" class="g-fill" pathLength="100"
+                style="stroke-dasharray: {{ '%.1f'|format(pct) }} 100"/>
+        </svg>
+        <div class="g-num">{{ '%.1f'|format(pct) }}<small>%</small></div>
+        <div class="g-lab">fraud probability</div>
+      </div>
+      <div class="badge big b-{{ result.tier|lower }}">{{ result.tier }} risk</div>
+      <p class="action">Recommended action: <b>{{ result.action }}</b></p>
+      <h4 class="sub">Why</h4>
+      <ul class="reasons">
+        {% for kind, text in result.reasons %}<li class="r-{{ kind }}">{{ text }}</li>{% endfor %}
+      </ul>
+      {% if result.tier == 'Low' %}
+        <p class="note">Low risk is not proof of a genuine customer: some fraud shows none of the signals this model can read.</p>
+      {% endif %}
+    {% else %}
+      <div class="empty">
+        <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <p>Fill in the form and click <b>Check risk</b> to see the result here.</p>
+      </div>
+    {% endif %}
+    <div class="scale">
+      <div class="s-low" style="width:{{ cfg.medium_threshold*100 }}%"></div>
+      <div class="s-med" style="width:{{ (cfg.high_threshold-cfg.medium_threshold)*100 }}%"></div>
+      <div class="s-high" style="width:{{ (1-cfg.high_threshold)*100 }}%"></div>
+    </div>
+    <div class="scale-lab"><span>Low &lt; {{ cfg.medium_threshold }}</span><span>Medium {{ cfg.medium_threshold }}–{{ cfg.high_threshold }}</span><span>High ≥ {{ cfg.high_threshold }}</span></div>
+  </div>
+</div>
+{% endblock %}

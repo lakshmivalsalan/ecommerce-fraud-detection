@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Model Dashboard{% endblock %}
+{% block content %}
+<div class="wrap page-head">
+  <h1>Model dashboard</h1>
+  <p>How the final model was chosen and how it performs on {{ '{:,}'.format(total) }} transactions it never saw during training.</p>
+</div>
+
+<div class="wrap">
+  <div class="kpis">
+    <div class="kpi"><small>Final model</small><b>XGBoost</b><span>with periodic device count</span></div>
+    <div class="kpi"><small>ROC-AUC (test)</small><b>0.843</b><span>ranking quality</span></div>
+    <div class="kpi"><small>PR-AUC (test)</small><b>0.721</b><span>baseline 0.094</span></div>
+    <div class="kpi"><small>High-tier precision</small><b>99.6%</b><span>1,155 of 1,160 were fraud</span></div>
+    <div class="kpi"><small>Fraud caught</small><b>71.6%</b><span>High + Medium tiers</span></div>
+  </div>
+
+  <div class="panel">
+    <h3 class="panel-title">Model comparison <small class="muted">validation set, 22,667 transactions</small></h3>
+    <div class="table-wrap">
+      <table class="tbl">
+        <thead><tr><th>Model</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1-score</th><th>ROC-AUC</th><th>PR-AUC</th></tr></thead>
+        <tbody>
+        {% for m in models %}
+          <tr class="{{ 'best' if m[7] }}">
+            <td>{{ m[0] }}</td>{% for v in m[1:7] %}<td>{{ '%.3f'|format(v) }}</td>{% endfor %}
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="panel">
+      <h3 class="panel-title">Confusion matrix <small class="muted">test set, cut-off 0.5</small></h3>
+      <div class="cm">
+        <div></div><div class="cm-h">Predicted legit</div><div class="cm-h">Predicted fraud</div>
+        <div class="cm-h side">Actual legit</div><div class="cm-c good">20,540<small>True negatives</small></div><div class="cm-c bad">5<small>False positives</small></div>
+        <div class="cm-h side">Actual fraud</div><div class="cm-c bad">967<small>False negatives</small></div><div class="cm-c good">1,155<small>True positives</small></div>
+      </div>
+      <div class="mini-metrics">
+        <div><b>0.957</b><small>Accuracy</small></div>
+        <div><b>0.996</b><small>Precision</small></div>
+        <div><b>0.544</b><small>Recall</small></div>
+        <div><b>0.704</b><small>F1-score</small></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3 class="panel-title">Risk tiers on unseen data</h3>
+      <div class="stack">
+        {% for t in tiers %}<div class="seg seg-{{ t.tier|lower }}" style="width:{{ '%.2f'|format(t.share) }}%"></div>{% endfor %}
+      </div>
+      <table class="tbl compact">
+        <thead><tr><th>Tier</th><th>Accounts</th><th>Real frauds</th><th>Fraud rate</th><th>Action</th></tr></thead>
+        <tbody>
+        {% for t in tiers %}
+          <tr><td><span class="badge b-{{ t.tier|lower }}">{{ t.tier }}</span></td><td>{{ '{:,}'.format(t.count) }}</td><td>{{ '{:,}'.format(t.frauds) }}</td><td>{{ '%.1f'|format(t.rate) }}%</td><td>{{ t.action }}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="panel">
+      <h3 class="panel-title">Most important features</h3>
+      {% for name, imp in features %}
+        <div class="fi"><span>{{ name }}</span><div class="fi-bar"><i style="width:{{ '%.1f'|format(imp*100) }}%"></i></div><b>{{ '%.3f'|format(imp) }}</b></div>
+      {% endfor %}
+    </div>
+    <div class="panel">
+      <h3 class="panel-title">Limitations</h3>
+      <ul class="plain">
+        <li>About 28% of fraud looks identical to normal activity on every column in this dataset, so it lands in the Low tier.</li>
+        <li>Device counts are taken over the whole batch, so this is a periodic review tool, not a real-time check at the moment of purchase.</li>
+        <li>The model should be retrained regularly as fraud patterns change.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

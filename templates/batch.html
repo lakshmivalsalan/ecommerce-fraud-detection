@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Batch Review{% endblock %}
+{% block content %}
+<div class="wrap page-head">
+  <h1>Batch review</h1>
+  <p>Upload the transactions from a review period. Every account is scored and sorted into a risk tier.</p>
+</div>
+
+<div class="wrap">
+  <div class="panel upload">
+    <form method="post" enctype="multipart/form-data" class="up-form">
+      <label class="drop">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v4h16v-4"/></svg>
+        <span><b>Choose a CSV file</b><small>Columns: signup_time, purchase_time, purchase_value, device_id, source, browser, sex, age, ip_address</small></span>
+        <input type="file" name="file" accept=".csv">
+      </label>
+      <button class="btn primary" type="submit">Score file</button>
+    </form>
+    <div class="or">or</div>
+    <form method="post">
+      <input type="hidden" name="demo" value="1">
+      <button class="btn ghost" type="submit">Use demo batch</button>
+      <small class="muted block">About 1,700 transactions from Fraud_Data.csv</small>
+    </form>
+  </div>
+
+  {% if scored is not none %}
+    <div class="res-head">
+      <div>
+        <h2>Results</h2>
+        <p class="muted">{{ source_name }} · {{ '{:,}'.format(scored|length) }} transactions scored</p>
+      </div>
+      <a class="btn ghost" href="{{ url_for('download', token=token) }}">Download scored CSV</a>
+    </div>
+
+    <div class="stack">
+      {% for s in summary %}<div class="seg seg-{{ s.tier|lower }}" style="width:{{ '%.2f'|format(s.share) }}%"></div>{% endfor %}
+    </div>
+    <div class="cards3">
+      {% for s in summary %}
+      <div class="tier-card tc-{{ s.tier|lower }}">
+        <span class="badge b-{{ s.tier|lower }}">{{ s.tier }} risk</span>
+        <div class="tc-num">{{ '{:,}'.format(s.count) }}</div>
+        <div class="tc-sub">{{ '%.1f'|format(s.share) }}% of accounts
+          {% if has_label %} · {{ '%.1f'|format(s.fraud_rate) }}% real fraud{% endif %}</div>
+        <div class="tc-act">{{ s.action }}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="panel">
+      <h3 class="panel-title">Review queue <small class="muted">High and Medium risk, highest score first (top 100)</small></h3>
+      {% if queue %}
+      <div class="table-wrap">
+        <table class="tbl">
+          <thead><tr><th>User</th><th>Risk score</th><th>Tier</th><th>Reason</th><th>Value</th><th>Accounts on device</th><th>Country</th>{% if has_label %}<th>Actual</th>{% endif %}</tr></thead>
+          <tbody>
+          {% for r in queue %}
+            <tr>
+              <td>{{ r.user_id }}</td>
+              <td><div class="bar"><span style="width:{{ '%.0f'|format(r.risk_score*100) }}%"></span></div>{{ '%.3f'|format(r.risk_score) }}</td>
+              <td><span class="badge b-{{ r.risk_tier|lower }}">{{ r.risk_tier }}</span></td>
+              <td>{{ r.reason }}</td>
+              <td>${{ r.purchase_value }}</td>
+              <td>{{ r.accounts_on_device }}</td>
+              <td>{{ r.country }}</td>
+              {% if has_label %}<td>{{ 'Fraud' if r.actual_fraud == 1 else 'Legit' }}</td>{% endif %}
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+        <p class="muted">No accounts in this batch reached Medium or High risk.</p>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
