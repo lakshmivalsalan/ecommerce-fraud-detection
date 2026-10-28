@@ -2,26 +2,16 @@
 {% block title %}Home{% endblock %}
 {% block content %}
 <section class="hero">
-  <div class="wrap hero-grid">
-    <div>
+  <div class="wrap">
+    <div style="max-width: 760px;">
       <span class="eyebrow">Machine learning · E-commerce security</span>
       <h1>Spot suspicious customer activity before it costs you.</h1>
-      <p class="lead">FraudGuard scores online transactions with an XGBoost model and sorts them into
-        <b class="t-high">High</b>, <b class="t-med">Medium</b> and <b class="t-low">Low</b> risk,
+      <p class="lead">This system checks every online transaction for signs of suspicious activity and sorts each one into
+        <b class="t-high">High</b>, <b class="t-med">Medium</b> or <b class="t-low">Low</b> risk,
         so fraud analysts know exactly which accounts to act on first.</p>
       <div class="cta">
         <a class="btn primary" href="{{ url_for('check') }}">Check a transaction</a>
         <a class="btn ghost" href="{{ url_for('batch') }}">Review a batch</a>
-      </div>
-    </div>
-    <div class="hero-card">
-      <div class="hc-title">Results on 22,667 unseen transactions</div>
-      <div class="hc-stat"><span>99.6%</span><small>precision in the High-risk tier</small></div>
-      <div class="hc-stat"><span>71.6%</span><small>of all fraud caught in High + Medium</small></div>
-      <div class="hc-row">
-        <div><b>0.843</b><small>ROC-AUC</small></div>
-        <div><b>0.721</b><small>PR-AUC</small></div>
-        <div><b>3</b><small>models compared</small></div>
       </div>
     </div>
   </div>
@@ -52,15 +42,5 @@
       <p>See how the three algorithms compared, the confusion matrix on unseen data and which features matter most.</p>
     </a>
   </div>
-</section>
-
-<section class="wrap section">
-  <h2 class="sec-title">How it works</h2>
-  <ol class="steps">
-    <li><b>Collect</b><span>Transaction details: signup and purchase time, purchase value, device, IP address, browser, source, age and sex.</span></li>
-    <li><b>Build features</b><span>Time from signup to purchase, a bot-speed flag, accounts sharing the device, and the country of the IP address.</span></li>
-    <li><b>Score</b><span>The trained XGBoost model gives each account a fraud probability between 0 and 1.</span></li>
-    <li><b>Prioritise</b><span>Scores of 0.5 or more are High risk, 0.1 to 0.5 Medium, and below 0.1 Low.</span></li>
-  </ol>
 </section>
 {% endblock %}

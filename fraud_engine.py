@@ -5,6 +5,11 @@ It rebuilds exactly the features the final XGBoost model was trained on
 (see fraud_detection_rebuild.ipynb) and turns the fraud probability into
 High / Medium / Low risk tiers.
 
+Hybrid design: the ML model gives the fraud probability and risk tier.
+A business rule is then applied on top: a purchase made within 1 minute
+of signup on a device shared by 10 or more accounts is always High risk.
+The model's probability is never changed; the rule only raises the tier.
+
 Needs these files in the same folder:
     fraud_model_xgb_final.json   final XGBoost model (saved with save_model)
     model_config_final.json      feature order, top countries, tier cut-offs
@@ -31,8 +36,34 @@ TIER_ACTION = {
     "Low": "Let through",
 }
 
+# Business rule (applied on top of the model)
+RULE_MAX_SECONDS = 60      # purchase within 1 minute of signup
+RULE_MIN_ACCOUNTS = 10     # device shared by 10 or more accounts
+RULE_TEXT = "Flagged by rule: rapid purchase on a heavily shared device"
+
 # Results of the final model on the locked test set (from the notebook).
 TEST_TIERS = {"High": (1160, 1155), "Medium": (1700, 364), "Low": (19807, 603)}
+
+
+def rule_hit(gap, accounts):
+    """True where the business rule applies."""
+    gap = np.asarray(gap, dtype=float)
+    accounts = np.asarray(accounts, dtype=float)
+    return (gap <= RULE_MAX_SECONDS) & (accounts >= RULE_MIN_ACCOUNTS)
+
+
+def time_text(gap):
+    """Readable time between signup and purchase, e.g. '45 seconds', '1 minute', '3.0 days'."""
+    if gap < 60:
+        n = int(round(gap))
+        return f"{n} second" + ("" if n == 1 else "s")
+    if gap < 3600:
+        n = int(round(gap / 60))
+        return f"{n} minute" + ("" if n == 1 else "s")
+    if gap < 86400:
+        n = int(round(gap / 3600))
+        return f"{n} hour" + ("" if n == 1 else "s")
+    return f"{gap / 86400:,.1f} days"
 
 
 class FraudEngine:
@@ -83,10 +114,14 @@ class FraudEngine:
                         np.where(prob >= self.config["medium_threshold"], "Medium", "Low"))
 
     @staticmethod
-    def reason_text(gap, accounts):
+    def reason_text(gap, accounts, by_rule=False):
         parts = []
+        if by_rule:
+            parts.append(RULE_TEXT)
         if gap <= 1:
-            parts.append("Bought 1 second after signup")
+            parts.append("Bought within 1 second of signup")
+        elif gap < 3600:
+            parts.append(f"Bought {time_text(gap)} after signup")
         if accounts >= 2:
             parts.append(f"{int(accounts)} accounts on one device")
         return "; ".join(parts) if parts else "No strong signal"
@@ -105,12 +140,19 @@ class FraudEngine:
 
         d, enc = self.make_features(raw)
         prob = self.model.predict_proba(enc.astype(float))[:, 1]
+        gaps = d["time_since_signup"].values
+        accounts = d["device_accounts_total"].values
+
+        model_tier = self.tier_of(prob)
+        by_rule = rule_hit(gaps, accounts) & (model_tier != "High")
+        final_tier = np.where(by_rule, "High", model_tier)
+
         out = pd.DataFrame({
             "user_id": d["user_id"],
             "risk_score": prob.round(4),
-            "risk_tier": self.tier_of(prob),
-            "reason": [self.reason_text(g, n) for g, n in
-                       zip(d["time_since_signup"].values, d["device_accounts_total"].values)],
+            "risk_tier": final_tier,
+            "decided_by": np.where(by_rule, "Rule", "Model"),
+            "reason": [self.reason_text(g, n, r) for g, n, r in zip(gaps, accounts, by_rule)],
             "purchase_value": d["purchase_value"],
             "seconds_since_signup": d["time_since_signup"],
             "accounts_on_device": d["device_accounts_total"],
@@ -133,20 +175,29 @@ class FraudEngine:
         d, enc = self.make_features(row)
         prob = float(self.model.predict_proba(enc.astype(float))[:, 1][0])
         gap = float(d["time_since_signup"].iloc[0])
+
+        tier = str(self.tier_of([prob])[0])
+        by_rule = bool(rule_hit([gap], [devices])[0]) and tier != "High"
+        if by_rule:
+            tier = "High"
+
         reasons = []
+        if by_rule:
+            reasons.append(("warn", RULE_TEXT))
         if gap <= 1:
             reasons.append(("warn", "Bought within 1 second of signup"))
         elif gap < 3600:
-            reasons.append(("warn", f"Bought {gap / 60:,.0f} minutes after signup"))
+            reasons.append(("warn", f"Bought {time_text(gap)} after signup"))
         else:
-            reasons.append(("ok", f"Bought {gap / 86400:,.1f} days after signup"))
+            reasons.append(("ok", f"Bought {time_text(gap)} after signup"))
         if devices >= 2:
             reasons.append(("warn", f"Device used by {int(devices)} accounts"))
         else:
             reasons.append(("ok", "Device used by this account only"))
         reasons.append(("info", f"IP address is from {d['country'].iloc[0]}"))
-        tier = str(self.tier_of([prob])[0])
-        return {"prob": prob, "tier": tier, "action": TIER_ACTION[tier], "reasons": reasons}
+
+        return {"prob": prob, "tier": tier, "action": TIER_ACTION[tier], "reasons": reasons,
+                "by_rule": by_rule}
 
     @staticmethod
     def load_demo():

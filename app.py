@@ -1,5 +1,5 @@
 """
-FraudGuard: Flask web application for the mini project
+Suspicious Activity Detection: Flask web application for the mini project
 "Detection of Suspicious Customer Activities in E-Commerce Using Machine Learning".
 
 Run with:   python app.py      then open  http://127.0.0.1:5000
@@ -13,8 +13,9 @@ from flask import Flask, render_template, request, redirect, url_for, send_file,
 from fraud_engine import FraudEngine, ip_to_number, TIERS, TIER_ACTION, TEST_TIERS
 
 app = Flask(__name__)
-app.secret_key = "fraudguard-mini-project"
+app.secret_key = "suspicious-activity-mini-project"
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50 MB upload limit
+app.config["TEMPLATES_AUTO_RELOAD"] = True           # pick up HTML changes without restarting
 
 engine = FraudEngine()
 RESULTS = {}          # last scored batches, kept in memory for download

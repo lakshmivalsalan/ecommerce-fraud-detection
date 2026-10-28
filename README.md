@@ -3,8 +3,7 @@
 MCA Mini Project, Mar Athanasius College of Engineering, Kothamangalam.
 
 An XGBoost model scores e-commerce transactions and sorts each account into
-**High**, **Medium** or **Low** risk. The model is served through **FraudGuard**,
-a Flask web application.
+**High**, **Medium** or **Low** risk. The model is served through a Flask web application.
 
 ## Files
 | File | What it is |
@@ -25,7 +24,7 @@ python app.py
 Then open http://127.0.0.1:5000 in a browser.
 
 ## Pages
-- **Home**: project overview and key results
+- **Home**: project overview
 - **Check Transaction**: score one transaction and see the reasons
 - **Batch Review**: upload a CSV (or use the demo batch), get a risk-tier summary, review queue and downloadable results
 - **Model Dashboard**: model comparison, confusion matrix, risk tiers on unseen data, feature importance
