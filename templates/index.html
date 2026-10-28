@@ -19,7 +19,7 @@
 
 <section class="wrap section">
   <h2 class="sec-title">What you can do</h2>
-  <div class="cards3">
+  <div class="cards3" style="grid-template-columns: repeat(2, 1fr);">
     <a class="feature" href="{{ url_for('check') }}">
       <div class="f-icon">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
@@ -33,13 +33,6 @@
       </div>
       <h3>Review a batch</h3>
       <p>Upload a CSV of transactions from a review period. Get a tier summary, a ranked review queue and a downloadable report.</p>
-    </a>
-    <a class="feature" href="{{ url_for('dashboard') }}">
-      <div class="f-icon">
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>
-      </div>
-      <h3>Explore the model</h3>
-      <p>See how the three algorithms compared, the confusion matrix on unseen data and which features matter most.</p>
     </a>
   </div>
 </section>
